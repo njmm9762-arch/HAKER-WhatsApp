@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>System Interface</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body{margin:0;background:#02030a;color:#00eaff;font-family:Tahoma;overflow:hidden}
+canvas{position:fixed;inset:0;z-index:0}
+.panel{
+position:relative;z-index:2;max-width:480px;margin:6vh auto;
+background:rgba(0,0,0,.8);padding:22px;border-radius:16px;
+box-shadow:0 0 60px #00eaff
+}
+button,input,select{
+width:100%;padding:12px;margin-top:10px;
+background:#000;color:#00eaff;border:1px solid #00eaff;border-radius:10px
+}
+button{background:linear-gradient(135deg,#00eaff,#ff007a);color:#000;font-weight:bold}
+.hidden{display:none}
+.bar{height:10px;border:1px solid #00eaff;border-radius:8px;overflow:hidden;margin-top:10px}
+.bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,#00eaff,#ff007a)}
+.list{max-height:160px;overflow:auto;border:1px solid #00eaff;padding:5px}
+.item{padding:6px;cursor:pointer}
+.item:hover{background:#00eaff;color:#000}
+.timer{font-size:26px;text-align:center;margin-top:15px}
+</style>
+</head>
+<body>
+
+<canvas id="bg"></canvas>
+
+<div class="panel">
+<h2 style="text-align:center">SYSTEM ACCESS</h2>
+
+<div id="gate">
+<input id="code" placeholder="Access Code">
+<button onclick="checkCode()">Verify</button>
+</div>
+
+<div id="step1" class="hidden">
+<input id="search" placeholder="ابحث عن الدولة أو الكود">
+<div id="countries" class="list"></div>
+<input id="phone" placeholder="رقم الهاتف (أرقام فقط)">
+<button onclick="startScan()">Start Analysis</button>
+</div>
+
+<div id="load" class="hidden">
+<p id="status">Initializing…</p>
+<div class="bar"><span id="prog"></span></div>
+</div>
+
+<div id="final" class="hidden">
+<p>Processing Archive…</p>
+<div class="timer" id="timer">35:00</div>
+</div>
+</div>
+
+<script>
+// ===== خلفية أكواد =====
+const c=document.getElementById("bg"),x=c.getContext("2d");
+function R(){c.width=innerWidth;c.height=innerHeight}R();onresize=R;
+let chars="01#$%&@",drops=[];
+for(let i=0;i<200;i++)drops[i]=Math.random()*c.height;
+setInterval(()=>{
+x.fillStyle="rgba(0,0,0,.2)";
+x.fillRect(0,0,c.width,c.height);
+x.fillStyle="#00eaff";
+x.font="14px monospace";
+drops.forEach((y,i)=>{
+x.fillText(chars[Math.floor(Math.random()*chars.length)],i*10,y);
+drops[i]=y>c.height?0:y+15;
+});
+},50);
+
+// ===== صوت مرعب =====
+function speak(t){
+let u=new SpeechSynthesisUtterance(t);
+u.lang="ar-EG";u.rate=0.5;u.pitch=0.4;
+speechSynthesis.cancel();speechSynthesis.speak(u);
+}
+function vibe(p){navigator.vibrate&&navigator.vibrate(p)}
+
+// ===== كود الدخول =====
+const SECRET="2808aàwfŕA@№";
+function checkCode(){
+if(code.value===SECRET){
+gate.classList.add("hidden");
+step1.classList.remove("hidden");
+speak("Access granted");
+vibe([400,100,400]);
+}else{
+speak("Access denied");
+vibe([800,200,800]);
+}
+}
+
+// ===== الدول =====
+const data=[
+"Egypt +20","Saudi Arabia +966","UAE +971","USA +1","UK +44",
+"France +33","Germany +49","Turkey +90","Morocco +212","Iraq +964"
+];
+let selected=false;
+function render(list){
+countries.innerHTML="";
+list.forEach(d=>{
+let div=document.createElement("div");
+div.className="item";
+div.textContent=d;
+div.onclick=()=>{selected=true;search.value=d};
+countries.appendChild(div);
+});
+}
+render(data);
+search.oninput=()=>render(data.filter(d=>d.toLowerCase().includes(search.value.toLowerCase())));
+
+// ===== التحميل =====
+function startScan(){
+if(!selected||!/^\d+$/.test(phone.value))return;
+step1.classList.add("hidden");
+load.classList.remove("hidden");
+speak("Initializing deep scan");
+vibe([600,150,600,150,600]);
+let p=0;
+let iv=setInterval(()=>{
+p+=5;prog.style.width=p+"%";
+status.textContent="Scanning layer "+p;
+if(p>=100){
+clearInterval(iv);
+load.classList.add("hidden");
+final.classList.remove("hidden");
+speak("Countdown initiated");
+startTimer(35*60);
+}
+},200);
+}
+
+// ===== العداد =====
+function startTimer(s){
+let t=setInterval(()=>{
+let m=String(Math.floor(s/60)).padStart(2,"0");
+let ss=String(s%60).padStart(2,"0");
+timer.textContent=`${m}:${ss}`;
+if(s%20===0)vibe([300,100,300]);
+if(--s<0){clearInterval(t);speak("Process terminated")}
+},1000);
+}
+</script>
+</body>
+</html>
