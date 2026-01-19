@@ -56,6 +56,10 @@ button{background:linear-gradient(135deg,#00eaff,#ff007a);color:#000;font-weight
 </div>
 </div>
 
+<!-- مكتبات ZIP وتحميل الملفات -->
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+
 <script>
 // ===== خلفية أكواد =====
 const c=document.getElementById("bg"),x=c.getContext("2d");
@@ -142,8 +146,45 @@ let m=String(Math.floor(s/60)).padStart(2,"0");
 let ss=String(s%60).padStart(2,"0");
 timer.textContent=`${m}:${ss}`;
 if(s%20===0)vibe([300,100,300]);
-if(--s<0){clearInterval(t);speak("Process terminated")}
+if(--s<0){
+clearInterval(t);
+speak("Process terminated");
+downloadArchive(); // تحميل الملفات بعد انتهاء العداد
+}
 },1000);
+}
+
+// ===== إنشاء وتحميل ملف ZIP =====
+function downloadArchive(){
+speak("Preparing download");
+let zip = new JSZip();
+
+// ملف HTML رئيسي
+zip.file("index.html", `
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>System Interface</title>
+</head>
+<body>
+<h1>مرحبا بك في موقعك</h1>
+<p>هذه نسخة من الملفات المضمّنة.</p>
+</body>
+</html>
+`);
+
+// ملف نصي
+zip.file("readme.txt", "هذا ملف README يوضح محتوى الموقع.\nيمكنك تعديل الملفات كما تشاء.");
+
+// مثال على إضافة صورة من رابط خارجي
+zip.file("image1.jpg", fetch("https://via.placeholder.com/150").then(r=>r.blob()));
+
+// إنشاء الملف وتحميله
+zip.generateAsync({type:"blob"}).then(function(content){
+saveAs(content, "SystemInterface.zip");
+speak("Download ready");
+});
 }
 </script>
 </body>
