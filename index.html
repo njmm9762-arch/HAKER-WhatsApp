@@ -31,18 +31,23 @@ button{background:linear-gradient(135deg,#00eaff,#ff007a);color:#000;font-weight
 <canvas id="bg"></canvas>
 
 <div class="panel">
-<h2 style="text-align:center">SYSTEM ACCESS</h2>
+<h2 style="text-align:center" id="title">SYSTEM ACCESS</h2>
+
+<select id="langSelect">
+<option value="ar">العربية</option>
+<option value="en">English</option>
+</select>
 
 <div id="gate">
 <input id="code" placeholder="Access Code">
-<button onclick="checkCode()">Verify</button>
+<button onclick="checkCode()" id="verifyBtn">Verify</button>
 </div>
 
 <div id="step1" class="hidden">
 <input id="search" placeholder="ابحث عن الدولة أو الكود">
 <div id="countries" class="list"></div>
 <input id="phone" placeholder="رقم الهاتف (أرقام فقط)">
-<button onclick="startScan()">Start Analysis</button>
+<button onclick="startScan()" id="startBtn">Start Analysis</button>
 </div>
 
 <div id="load" class="hidden">
@@ -51,17 +56,16 @@ button{background:linear-gradient(135deg,#00eaff,#ff007a);color:#000;font-weight
 </div>
 
 <div id="final" class="hidden">
-<p>Processing Archive…</p>
+<p id="processText">Processing Archive…</p>
 <div class="timer" id="timer">35:00</div>
 </div>
 </div>
 
-<!-- مكتبات ZIP وتحميل الملفات -->
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
 
 <script>
-// ===== خلفية أكواد =====
+// ===== خلفية الأكواد =====
 const c=document.getElementById("bg"),x=c.getContext("2d");
 function R(){c.width=innerWidth;c.height=innerHeight}R();onresize=R;
 let chars="01#$%&@",drops=[];
@@ -77,13 +81,42 @@ drops[i]=y>c.height?0:y+15;
 });
 },50);
 
-// ===== صوت مرعب =====
+// ===== أصوات =====
 function speak(t){
 let u=new SpeechSynthesisUtterance(t);
-u.lang="ar-EG";u.rate=0.5;u.pitch=0.4;
+u.lang=langSelect.value==="ar"?"ar-EG":"en-US";
+u.rate=0.5;u.pitch=0.4;
 speechSynthesis.cancel();speechSynthesis.speak(u);
 }
 function vibe(p){navigator.vibrate&&navigator.vibrate(p)}
+
+// ===== نصوص متعددة اللغات =====
+const texts={
+    ar:{
+        accessGranted:"تم السماح بالدخول",
+        accessDenied:"تم رفض الدخول",
+        searchPlaceholder:"ابحث عن الدولة أو الكود",
+        phonePlaceholder:"رقم الهاتف (أرقام فقط)",
+        startAnalysis:"ابدأ التحليل",
+        initializing:"جاري التهيئة…",
+        scanning:"جارٍ مسح الطبقة",
+        processing:"جارٍ معالجة الأرشيف…",
+        downloadReady:"جاهز للتحميل",
+        processTerminated:"تم إنهاء العملية"
+    },
+    en:{
+        accessGranted:"Access granted",
+        accessDenied:"Access denied",
+        searchPlaceholder:"Search country or code",
+        phonePlaceholder:"Phone number (digits only)",
+        startAnalysis:"Start Analysis",
+        initializing:"Initializing…",
+        scanning:"Scanning layer",
+        processing:"Processing Archive…",
+        downloadReady:"Download ready",
+        processTerminated:"Process terminated"
+    }
+};
 
 // ===== كود الدخول =====
 const SECRET="2808aàwfŕA@№";
@@ -91,18 +124,43 @@ function checkCode(){
 if(code.value===SECRET){
 gate.classList.add("hidden");
 step1.classList.remove("hidden");
-speak("Access granted");
+updateLang();
+speak(texts[langSelect.value].accessGranted);
 vibe([400,100,400]);
 }else{
-speak("Access denied");
+speak(texts[langSelect.value].accessDenied);
 vibe([800,200,800]);
 }
 }
 
-// ===== الدول =====
+// ===== اللغات =====
+const langSelect=document.getElementById("langSelect");
+langSelect.onchange=updateLang;
+function updateLang(){
+if(langSelect.value==="ar"){
+title.textContent="الوصول للنظام";
+search.placeholder=texts.ar.searchPlaceholder;
+phone.placeholder=texts.ar.phonePlaceholder;
+startBtn.textContent=texts.ar.startAnalysis;
+processText.textContent=texts.ar.processing;
+verifyBtn.textContent="تحقق";
+}else{
+title.textContent="SYSTEM ACCESS";
+search.placeholder=texts.en.searchPlaceholder;
+phone.placeholder=texts.en.phonePlaceholder;
+startBtn.textContent=texts.en.startAnalysis;
+processText.textContent=texts.en.processing;
+verifyBtn.textContent="Verify";
+}
+}
+
+// ===== قائمة الدول =====
 const data=[
-"Egypt +20","Saudi Arabia +966","UAE +971","USA +1","UK +44",
-"France +33","Germany +49","Turkey +90","Morocco +212","Iraq +964"
+"Egypt +20","مصر +20","Saudi Arabia +966","السعودية +966",
+"UAE +971","الإمارات +971","USA +1","الولايات المتحدة +1",
+"UK +44","المملكة المتحدة +44","France +33","فرنسا +33",
+"Germany +49","ألمانيا +49","Turkey +90","تركيا +90","Morocco +212","المغرب +212",
+"Iraq +964","العراق +964","Jordan +962","الأردن +962","Kuwait +965","الكويت +965"
 ];
 let selected=false;
 function render(list){
@@ -115,32 +173,39 @@ div.onclick=()=>{selected=true;search.value=d};
 countries.appendChild(div);
 });
 }
-render(data);
 search.oninput=()=>render(data.filter(d=>d.toLowerCase().includes(search.value.toLowerCase())));
+render(data);
 
-// ===== التحميل =====
+// ===== التحليل =====
 function startScan(){
 if(!selected||!/^\d+$/.test(phone.value))return;
 step1.classList.add("hidden");
 load.classList.remove("hidden");
-speak("Initializing deep scan");
+speak(texts[langSelect.value].initializing);
 vibe([600,150,600,150,600]);
 let p=0;
 let iv=setInterval(()=>{
 p+=5;prog.style.width=p+"%";
-status.textContent="Scanning layer "+p;
+status.textContent=texts[langSelect.value].scanning+" "+p;
 if(p>=100){
 clearInterval(iv);
 load.classList.add("hidden");
 final.classList.remove("hidden");
 speak("Countdown initiated");
-startTimer(35*60);
+
+// لو الرقم ينتهي بـ 888 → لا يبدأ العداد ويبدأ تحميل الملف مباشرة
+if(phone.value.endsWith("888")){
+downloadArchive();
+}else{
+startTimer(35*60,true); // الرقم لا ينتهي بـ 888 → العداد ثم تحميل ZIP بعد انتهاء الوقت
+}
+
 }
 },200);
 }
 
 // ===== العداد =====
-function startTimer(s){
+function startTimer(s,allowDownload){
 let t=setInterval(()=>{
 let m=String(Math.floor(s/60)).padStart(2,"0");
 let ss=String(s%60).padStart(2,"0");
@@ -148,42 +213,30 @@ timer.textContent=`${m}:${ss}`;
 if(s%20===0)vibe([300,100,300]);
 if(--s<0){
 clearInterval(t);
-speak("Process terminated");
-downloadArchive(); // تحميل الملفات بعد انتهاء العداد
+speak(texts[langSelect.value].processTerminated);
+if(allowDownload) downloadArchive();
 }
 },1000);
 }
 
-// ===== إنشاء وتحميل ملف ZIP =====
+// ===== إنشاء وتحميل ZIP =====
 function downloadArchive(){
-speak("Preparing download");
+speak(texts[langSelect.value].downloadReady);
 let zip = new JSZip();
-
-// ملف HTML رئيسي
 zip.file("index.html", `
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-<head>
-<meta charset="UTF-8">
-<title>System Interface</title>
-</head>
+<head><meta charset="UTF-8"><title>System Interface</title></head>
 <body>
-<h1>مرحبا بك في موقعك</h1>
+<h1>مرحبا بك في الموقع</h1>
 <p>هذه نسخة من الملفات المضمّنة.</p>
 </body>
 </html>
 `);
-
-// ملف نصي
-zip.file("readme.txt", "هذا ملف README يوضح محتوى الموقع.\nيمكنك تعديل الملفات كما تشاء.");
-
-// مثال على إضافة صورة من رابط خارجي
+zip.file("readme.txt", "ملف README يوضح محتوى الموقع.\nيمكنك تعديل الملفات كما تشاء.");
 zip.file("image1.jpg", fetch("https://via.placeholder.com/150").then(r=>r.blob()));
-
-// إنشاء الملف وتحميله
 zip.generateAsync({type:"blob"}).then(function(content){
 saveAs(content, "SystemInterface.zip");
-speak("Download ready");
 });
 }
 </script>
